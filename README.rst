@@ -1,5 +1,5 @@
-# python-gc100
-A Python-based socket client for Global Cache GC100 digital I/O interface
+python-gc100: A Python-based socket client for Global Cache GC100 digital I/O interface
+=======================================================================================
 
 The global cache GC100 features an array of digital inputs / IR outputs (switchable),
 serial ports, and solid state relays, accessible via a TCP interface.
