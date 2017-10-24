@@ -4,6 +4,8 @@ A Python-based socket client for Global Cache GC100 digital I/O interface
 The global cache GC100 features an array of digital inputs / IR outputs (switchable),
 serial ports, and solid state relays, accessible via a TCP interface.
 
+More info can be found at the manufaturer's website: https://www.globalcache.com/products/gc-100/
+
 python-gc100 provides a TCP client to interface with a GC100.
 
 Currently serial port communication and IR functions are not supported. 
