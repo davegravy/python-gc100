@@ -43,7 +43,11 @@ Turn it off again:
 
 If you want to subscribe to be notified (push) of state changes to digital input '4:3':
    
-    >>> gc.notify_subscribe('4:3', callback_fn)
+    >>> gc.subscribe_notify('4:3', callback_fn)
+
+Close the connection
+
+    >>> gc.quit()
  
 Compatibility
 ------------

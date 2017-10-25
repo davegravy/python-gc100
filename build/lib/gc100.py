@@ -96,6 +96,9 @@ class GC100SocketClient(object):
                                            'permanent': permanent,
                                            'time_created': datetime.now()}
 
+    def subscribe_notify(self, module_address, callback):
+        self.subscribe('statechange,' + module_address, callback, True)
+
     def unsubscribe(self, subscriber_id):
         # rm subscribers
         self.subscribers.pop(subscriber_id)
