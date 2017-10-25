@@ -1,4 +1,4 @@
-python-gc100: 
+python-gc100
 =============
 
 This is a Python-based socket client for Global Cache GC100 digital I/O interface
