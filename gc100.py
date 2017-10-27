@@ -1,3 +1,5 @@
+"""A TCP socket client for communication with GC100 devices."""
+
 from threading import Thread
 from queue import Queue
 import socket
@@ -18,12 +20,16 @@ from datetime import datetime
 
 
 class MessageThread(Thread):
+    """Process responses & notifications and pipe data to callback(s)."""
+
     def __init__(self, gc100_client):
+        """Initialize message thread."""
         self.gc100_client = gc100_client
         self.stopped = False
         super(MessageThread, self).__init__()
 
     def run(self):
+        """Run message thread."""
         while not self.stopped:
             # grab a message from queue
             message = self.gc100_client.queue.get()
@@ -45,7 +51,6 @@ class MessageThread(Thread):
                     if subscriber['permanent'] is False:
                         self.gc100_client.unsubscribe(subscriber_id)
 
-
             print("message thread: " + message)
 
             # signals to queue job is done
@@ -53,28 +58,29 @@ class MessageThread(Thread):
 
 
 class ReceiveThread(Thread):
+    """Receive data and push it to the queue."""
+
     def __init__(self, gc100_client):
+        """Initialize receive thread."""
         self.gc100_client = gc100_client
         self.stopped = False
         Thread.__init__(self)
 
     def run(self):
+        """Run receive thread."""
         while not self.stopped:
             self.gc100_client.receive()
 
 
 class GC100SocketClient(object):
-    """
-    A Python client for the GC100 socket server.
-
-
-    """
+    """A Python client for the GC100 socket server."""
 
     queue = Queue()
     subscribers = {}
     _socket_recv = 1024
 
     def __init__(self, host, port):
+        """Initialize the socket client."""
         self.host = host
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -89,6 +95,7 @@ class GC100SocketClient(object):
         self.message_thread.start()
 
     def subscribe(self, event, callback, permanent=False):
+        """Subscribe a callback to any event."""
         # add subscribers
         subscriber_id = uuid.uuid4()
         self.subscribers[subscriber_id] = {'event': event,
@@ -97,18 +104,20 @@ class GC100SocketClient(object):
                                            'time_created': datetime.now()}
 
     def subscribe_notify(self, module_address, callback):
+        """Subscribe a callback to a notification event."""
         self.subscribe('statechange,' + module_address, callback, True)
 
     def unsubscribe(self, subscriber_id):
-        # rm subscribers
+        """Unsubscribe a callback from an event."""
         self.subscribers.pop(subscriber_id)
 
     def send(self, data):
+        """Send data to socket."""
         # send message
         self.socket.send(data.encode('ascii'))
 
     def receive(self):
-
+        """Receive data from socket."""
         while (True):
             # read data from the buffer
             data = self.socket.recv(self._socket_recv)
@@ -136,6 +145,7 @@ class GC100SocketClient(object):
             #     pass
 
     def quit(self):
+        """Close threads and socket."""
         # stop all threads and close the socket
         self.receive_thread.stopped = True
         self.receive_thread._Thread__stop()
@@ -149,9 +159,12 @@ class GC100SocketClient(object):
         self.socket.close()
 
     def read_sensor(self, module_address, callback_fn):
+        """Read state from digital input."""
         self.subscribe("state," + module_address, callback_fn)
         self.send("getstate,{}{}".format(module_address, chr(13)))
 
     def write_switch(self, module_address, state, callback_fn):
+        """Set relay state."""
         self.subscribe("state," + module_address, callback_fn)
-        self.send("setstate,{},{}{}".format(module_address, str(state), chr(13)))
+        self.send("setstate,{},{}{}"
+                  .format(module_address, str(state), chr(13)))
