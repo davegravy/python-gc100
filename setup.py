@@ -6,7 +6,7 @@ https://github.com/pypa/sampleproject
 """
 
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from setuptools import setup
 # To use a consistent encoding
 from codecs import open
 from os import path
@@ -25,7 +25,8 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version='1.0.2a',
 
-    description='A Python-based socket client for Global Cache GC100 digital I/O interface',
+    description="""A Python-based socket client for
+                   Global Cache GC100 digital I/O interface""",
     long_description=long_description,
 
     # The project's main homepage.
@@ -65,7 +66,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    #packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+    # packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:

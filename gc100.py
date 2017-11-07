@@ -146,20 +146,6 @@ class GC100SocketClient(object):
                 result = data.decode('ascii').strip(' \r')
                 self.queue.put(result)
 
-            # try:
-            #     # line breaks means we are handling multiple responses
-            #     if "\n\n" in stream_data:
-            #         # split and parse each response
-            #         for stream_data_line in stream_data.split("\n\n"):
-            #             # try to load as JSON
-            #             data_json = json.loads(stream_data_line)
-            #
-            #             # we have a response, add it to the queue
-            #             self.queue.put(data_json)
-            # except ValueError:
-            #     # invalid json, incomplete data
-            #     pass
-
     def quit(self):
         """Close threads and socket."""
         # stop all threads and close the socket
