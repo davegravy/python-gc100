@@ -1,10 +1,11 @@
 """A TCP socket client for communication with GC100 devices."""
 
 from threading import Thread
-from queue import Queue
+import queue
 import socket
 import uuid
 from datetime import datetime
+from time import sleep
 
 
 # class PingThread(Thread):
@@ -31,8 +32,11 @@ class MessageThread(Thread):
     def run(self):
         """Run message thread."""
         while not self.stopped:
-            # grab a message from queue
-            message = self.gc100_client.queue.get()
+            try:
+                # grab a message from queue
+                message = self.gc100_client.queue.get(True, 5)
+            except queue.Empty:
+                continue
 
             # parse message
             event, module_address, value = str(message).split(',')
@@ -75,7 +79,7 @@ class ReceiveThread(Thread):
 class GC100SocketClient(object):
     """A Python client for the GC100 socket server."""
 
-    queue = Queue()
+    queue = queue.Queue()
     subscribers = {}
     _socket_recv = 1024
 
@@ -84,6 +88,8 @@ class GC100SocketClient(object):
         self.host = host
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.settimeout(5)
+        # self.socket.setblocking(False)
         self.socket.connect((self.host, self.port))
 
         # self.ping_thread = PingThread(self)
@@ -118,17 +124,27 @@ class GC100SocketClient(object):
 
     def receive(self):
         """Receive data from socket."""
-        while (True):
-            # read data from the buffer
-            data = self.socket.recv(self._socket_recv)
-
-            if not data:
-                # no more data being transmitted
+        while True:
+            try:
+                # read data from the buffer
+                data = self.socket.recv(self._socket_recv)
+            except socket.timeout as e:
+                sleep(1)
+                return
+            except socket.error as e:
+                # Something else happened
+                print(e)
                 return
 
-            print("receive thread: " + data.decode('ascii'))
-            result = data.decode('ascii').strip(' \r')
-            self.queue.put(result)
+            else:
+                if len(data) == 0:
+                    # no more data being transmitted
+                    print('orderly shutdown on server end')
+                    return
+
+                print("receive thread: " + data.decode('ascii'))
+                result = data.decode('ascii').strip(' \r')
+                self.queue.put(result)
 
             # try:
             #     # line breaks means we are handling multiple responses
@@ -148,13 +164,18 @@ class GC100SocketClient(object):
         """Close threads and socket."""
         # stop all threads and close the socket
         self.receive_thread.stopped = True
-        self.receive_thread._Thread__stop()
+        # self.receive_thread._Thread__stop()
 
         self.message_thread.stopped = True
-        self.message_thread._Thread__stop()
+        # self.message_thread._Thread__stop()
 
         # self.ping_thread.stopped = True
         # self.ping_thread._Thread__stop()
+
+        self.receive_thread.join()
+        print('receive_thread exited')
+        self.message_thread.join()
+        print('message_thread exited')
 
         self.socket.close()
 
