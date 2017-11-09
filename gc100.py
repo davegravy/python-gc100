@@ -6,6 +6,7 @@ import socket
 import uuid
 from datetime import datetime
 from time import sleep
+import logging
 
 
 # class PingThread(Thread):
@@ -18,6 +19,8 @@ from time import sleep
 #         while not self.stopped:
 #             self.scrolls_client.send({'msg': 'Ping'})
 #             time.sleep(10)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class MessageThread(Thread):
@@ -36,9 +39,16 @@ class MessageThread(Thread):
                 # grab a message from queue
                 message = self.gc100_client.queue.get(True, 5)
             except queue.Empty:
+                _LOGGER.debug("message thread: no messages")
                 continue
 
+            _LOGGER.debug("message thread: " + str(message))
+
             # parse message
+            split_message = str(message).split(',')
+            if len(split_message) != 3:
+                _LOGGER.error("can't parse server response")
+                continue
             event, module_address, value = str(message).split(',')
             value = int(value)
 
@@ -54,8 +64,6 @@ class MessageThread(Thread):
                     subscriber['callback'](value)
                     if subscriber['permanent'] is False:
                         self.gc100_client.unsubscribe(subscriber_id)
-
-            print("message thread: " + message)
 
             # signals to queue job is done
             self.gc100_client.queue.task_done()
@@ -120,6 +128,7 @@ class GC100SocketClient(object):
     def send(self, data):
         """Send data to socket."""
         # send message
+        _LOGGER.debug("send: " + data)
         self.socket.send(data.encode('ascii'))
 
     def receive(self):
@@ -129,22 +138,28 @@ class GC100SocketClient(object):
                 # read data from the buffer
                 data = self.socket.recv(self._socket_recv)
             except socket.timeout as e:
+                _LOGGER.debug(e)
                 sleep(1)
                 return
             except socket.error as e:
                 # Something else happened
-                print(e)
+                _LOGGER.error(e)
                 return
 
             else:
                 if len(data) == 0:
                     # no more data being transmitted
-                    print('orderly shutdown on server end')
+                    _LOGGER.info('orderly shutdown on server end')
                     return
 
-                print("receive thread: " + data.decode('ascii'))
-                result = data.decode('ascii').strip(' \r')
-                self.queue.put(result)
+                # remove trailing carriage return, then split
+                # on carriage return (for multi-line replies)
+                results = data.decode('ascii').rstrip('\r').split('\r')
+                if len(results) > 1:
+                    _LOGGER.debug("multi-line reply")
+                for result in results:
+                    _LOGGER.debug("receive thread: " + result)
+                    self.queue.put(result)
 
     def quit(self):
         """Close threads and socket."""
@@ -159,19 +174,23 @@ class GC100SocketClient(object):
         # self.ping_thread._Thread__stop()
 
         self.receive_thread.join()
-        print('receive_thread exited')
+        _LOGGER.info('receive_thread exited')
         self.message_thread.join()
-        print('message_thread exited')
+        _LOGGER.info('message_thread exited')
 
         self.socket.close()
 
     def read_sensor(self, module_address, callback_fn):
         """Read state from digital input."""
+        _LOGGER.info("read_sensor: getstate,{}{}"
+                     .format(module_address, chr(13)))
         self.subscribe("state," + module_address, callback_fn)
         self.send("getstate,{}{}".format(module_address, chr(13)))
 
     def write_switch(self, module_address, state, callback_fn):
         """Set relay state."""
+        _LOGGER.info("write_switch: setstate,{},{}{}"
+                     .format(module_address, str(state), chr(13)))
         self.subscribe("state," + module_address, callback_fn)
         self.send("setstate,{},{}{}"
                   .format(module_address, str(state), chr(13)))
