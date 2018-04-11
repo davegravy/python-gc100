@@ -130,6 +130,9 @@ class GC100SocketClient(object):
         # send message
         _LOGGER.debug("send: " + data)
         self.socket.send(data.encode('ascii'))
+        # sleep needed to prevent flooding the GC100 with sends
+        sleep(.01) 
+        
 
     def receive(self):
         """Receive data from socket."""
