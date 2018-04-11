@@ -31,7 +31,7 @@ Initialize the connection to the socket server
 
 Example, if you want to read and print the state of module address '4:1':
 
-    >>> gc.read_input('4:1', callback_fn)
+    >>> gc.read_sensor('4:1', callback_fn)
 
 Or turn the relay on at address '3:2', and confirm its new state:
 
